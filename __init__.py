@@ -1,7 +1,7 @@
+from typing import Any, Awaitable, Callable, Optional, TypeVar
 import asyncio
 import sublime
 import threading
-from typing import Awaitable, Optional
 
 
 class _Thread(threading.Thread):
@@ -66,3 +66,65 @@ def run_coroutine(coro: Awaitable) -> None:
     you call it from within your coroutine function.
     """
     get().call_soon_threadsafe(lambda: asyncio.get_running_loop().create_task(coro))
+
+
+T = TypeVar("T")
+
+
+def run_in_main_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> Awaitable[T]:
+    """
+    Run a blocking function on the main thread. Return a future that contains the result.
+
+    You use this in a coroutine function like this:
+
+    ```
+    def display_something() -> int:
+        v = sublime.active_window().active_view()
+        v.add_regions("asdf", [])
+        return 42
+
+    async def my_coroutine() -> None:
+        result = await run_in_main_thread(display_something)
+        # result contains 42
+    ```
+    """
+    future = asyncio.get_running_loop().create_future()
+
+    def wrap() -> None:
+        result = f(*args, **kwargs)
+        get().call_soon_threadsafe(lambda: future.set_result(result))
+
+    sublime.set_timeout(wrap)
+    return future
+
+
+def run_in_worker_thread(f: Callable[..., T], *args: Any, **kwargs: Any) -> Awaitable[T]:
+    """
+    Run a blocking function on the worker ("async") thread. Return a future that contains the result.
+
+    You use this in a coroutine function like this:
+
+    ```
+    def compute_something() -> float:
+        return 42.0
+
+    async def my_coroutine() -> None:
+        result = await run_in_worker_thread(compute_something)
+        # result contains 42.0
+    ```
+    """
+    future = asyncio.get_running_loop().create_future()
+
+    def wrap() -> None:
+        result = f(*args, **kwargs)
+        get().call_soon_threadsafe(lambda: future.set_result(result))
+
+    sublime.set_timeout_async(wrap)
+    return future
+
+
+async def next_frame() -> None:
+    """
+    Wait for the next UI frame.
+    """
+    await run_in_main_thread(lambda: None)
