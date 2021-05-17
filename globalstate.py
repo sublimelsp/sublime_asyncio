@@ -168,7 +168,7 @@ def call_soon_threadsafe(callback: Callable[..., Any], *args: Any) -> None:
     get().call_soon_threadsafe(callback, *args)
 
 
-def run_coroutine(coro: Awaitable) -> None:
+def run_coroutine(coro: Awaitable, task_receiver: Optional[Callable[[asyncio.Task], Any]] = None) -> None:
     """
     Convenience function to run a coroutine.
 
@@ -176,7 +176,15 @@ def run_coroutine(coro: Awaitable) -> None:
     every call to this function. Because of this, it is generally unsafe to check whether the future would be done
     or contains an exception. Therefore we don't return a future.
 
+    The second argument is an optional callable that receives the spawned task. You can use it to store the task
+    somewhere and then possibly cancel it at a later point in time.
+
     To get back on Sublime's main thread you use the usual strategy of calling `sublime.set_timeout`. Only this time
     you call it from within your coroutine function.
     """
-    call_soon_threadsafe(lambda: asyncio.get_running_loop().create_task(coro))
+    def wrap() -> None:
+        task = asyncio.get_running_loop().create_task(coro)
+        if task_receiver:
+            task_receiver(task)
+
+    call_soon_threadsafe(wrap)
