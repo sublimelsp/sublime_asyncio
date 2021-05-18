@@ -7,7 +7,7 @@ from typing import Any, Awaitable, Callable, Optional, Sequence, Tuple, TypeVar,
 
 import sublime
 
-from sublime_asyncio.globalstate import call_soon_threadsafe
+from .globalstate import call_soon_threadsafe
 
 T = TypeVar("T")
 
@@ -79,9 +79,8 @@ def get_clipboard(size_limit: int = 16777216) -> Awaitable[str]:
     future = asyncio.get_running_loop().create_future()
     try:
         sublime.get_clipboard_async(
-            lambda content: call_soon_threadsafe(
-                lambda: future.set_result(content)),
-            size_limit=size_limit)
+            lambda content: call_soon_threadsafe(lambda: future.set_result(content)), size_limit=size_limit
+        )
     except Exception as ex:
         future.set_exception(ex)
     return future

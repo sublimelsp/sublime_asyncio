@@ -6,6 +6,17 @@ multi_line_output = 3
 line-length = 120
 target-version = ['py38']
 
+[tool.flake8]
+max-line-length = 120
+
+[tool.pyright]
+# invoke pyright with the PYTHONPATH environment variable set to the directory
+# of the sublime.py file. Otherwise we get import errors.
+stubPath = "stubs"
+reportMissingImports = true
+reportMissingTypeStubs = false
+pythonVersion = "3.8"
+
 # regex
 exclude = '''
 /(

@@ -70,7 +70,7 @@ class _Data:
         self.thread.start()
 
     def __del__(self) -> None:
-        for task in asyncio.Task.all_tasks():
+        for task in asyncio.all_tasks(self.loop):
             task.cancel()
         try:
             self.loop.run_until_complete(self.loop.shutdown_asyncgens())

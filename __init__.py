@@ -1,3 +1,4 @@
+# flake8: noqa
 from .api_wrappers import (
     get_clipboard,
     next_frame,
