@@ -78,7 +78,10 @@ def get_clipboard(size_limit: int = 16777216) -> Awaitable[str]:
     """
     future = asyncio.get_running_loop().create_future()
     try:
-        sublime.get_clipboard_async(future.set_result, size_limit=size_limit)
+        sublime.get_clipboard_async(
+            lambda content: call_soon_threadsafe(
+                lambda: future.set_result(content)),
+            size_limit=size_limit)
     except Exception as ex:
         future.set_exception(ex)
     return future
