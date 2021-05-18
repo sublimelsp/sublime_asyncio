@@ -3,8 +3,7 @@ This module bridges the old, low-level callback-based functions to high-level as
 """
 import asyncio
 import functools
-from typing import (Any, Awaitable, Callable, Optional, Sequence, Tuple,
-                    TypeVar, Union)
+from typing import Any, Awaitable, Callable, Optional, Sequence, Tuple, TypeVar, Union
 
 import sublime
 
@@ -20,7 +19,9 @@ def _resolve_function_invocation(future: asyncio.Future, f: Callable[..., T], *a
         call_soon_threadsafe(future.set_exception, ex)
 
 
-def _run_in_runner(runner: Callable[[Callable[[], None]], None], f: Callable[..., T], *args: Any, **kwargs: Any) -> Awaitable[T]:
+def _run_in_runner(
+    runner: Callable[[Callable[[], None]], None], f: Callable[..., T], *args: Any, **kwargs: Any
+) -> Awaitable[T]:
     future = asyncio.get_running_loop().create_future()
     runner(functools.partial(_resolve_function_invocation, future, f, *args, **kwargs))
     return future
@@ -87,7 +88,7 @@ def open_dialog(
     file_types: Sequence[Tuple[str, Sequence[str]]] = [],
     directory: Optional[str] = None,
     multi_select: bool = False,
-    allow_folders: bool = False
+    allow_folders: bool = False,
 ) -> Awaitable[str]:
     """
     See https://www.sublimetext.com/docs/api_reference.html
@@ -99,7 +100,7 @@ def open_dialog(
             file_types=file_types,
             directory=directory,
             multi_select=multi_select,
-            allow_folders=allow_folders
+            allow_folders=allow_folders,
         )
     except Exception as ex:
         future.set_exception(ex)
@@ -110,7 +111,7 @@ def save_dialog(
     file_types: Sequence[Tuple[str, Sequence[str]]] = [],
     directory: Optional[str] = None,
     name: Optional[str] = None,
-    extension: Optional[str] = None
+    extension: Optional[str] = None,
 ) -> Awaitable[str]:
     """
     See https://www.sublimetext.com/docs/api_reference.html
@@ -122,7 +123,7 @@ def save_dialog(
             file_types=file_types,
             directory=directory,
             name=name,
-            extension=extension
+            extension=extension,
         )
     except Exception as ex:
         future.set_exception(ex)
@@ -136,9 +137,7 @@ def select_folder_dialog(directory: Optional[str] = None, multi_select: bool = F
     future = asyncio.get_running_loop().create_future()
     try:
         sublime.select_folder_dialog(
-            callback=functools.partial(_resolve_optional_string, future),
-            directory=directory,
-            multi_select=multi_select
+            callback=functools.partial(_resolve_optional_string, future), directory=directory, multi_select=multi_select
         )
     except Exception as ex:
         future.set_exception(ex)
@@ -161,7 +160,7 @@ def show_input_panel(
     window: sublime.Window,
     caption: Optional[str] = None,
     initial_text: Optional[str] = None,
-    on_change: Optional[Callable[[str], Any]] = None
+    on_change: Optional[Callable[[str], Any]] = None,
 ) -> Awaitable[str]:
     """
     See https://www.sublimetext.com/docs/api_reference.html
@@ -173,7 +172,7 @@ def show_input_panel(
             initial_text=initial_text,
             on_done=lambda s: call_soon_threadsafe(lambda: future.set_result(s)),
             on_change=on_change,
-            on_cancel=lambda: call_soon_threadsafe(lambda: future.set_exception(asyncio.CancelledError()))
+            on_cancel=lambda: call_soon_threadsafe(lambda: future.set_exception(asyncio.CancelledError())),
         )
     except Exception as ex:
         future.set_exception(ex)
@@ -186,7 +185,7 @@ def show_quick_panel(
     flags: int = 0,
     selected_index: int = -1,
     on_highlighted: Optional[Callable[[int], Any]] = None,
-    placeholder: Optional[str] = None
+    placeholder: Optional[str] = None,
 ) -> Awaitable[int]:
     """
     See https://www.sublimetext.com/docs/api_reference.html
@@ -199,7 +198,7 @@ def show_quick_panel(
             flags=flags,
             selected_index=selected_index,
             on_highlight=on_highlighted,
-            placeholder=placeholder
+            placeholder=placeholder,
         )
     except Exception as ex:
         future.set_exception(ex)

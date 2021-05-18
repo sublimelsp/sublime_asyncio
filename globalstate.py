@@ -58,12 +58,10 @@ import asyncio
 import threading
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
-
 ExitHandler = Callable[[], Awaitable[None]]
 
 
 class _Data:
-
     def __init__(self) -> None:
         self.refcount = 1
         self.loop = asyncio.new_event_loop()
@@ -182,6 +180,7 @@ def run_coroutine(coro: Awaitable, task_receiver: Optional[Callable[[asyncio.Tas
     To get back on Sublime's main thread you use the usual strategy of calling `sublime.set_timeout`. Only this time
     you call it from within your coroutine function.
     """
+
     def wrap() -> None:
         task = asyncio.get_running_loop().create_task(coro)
         if task_receiver:
