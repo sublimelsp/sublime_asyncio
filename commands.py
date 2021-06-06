@@ -1,8 +1,8 @@
 import asyncio
-import contextlib
 from asyncio.tasks import Task
-from typing import Any, Awaitable, Generator, Optional
+from typing import Any, Awaitable
 from weakref import WeakSet
+import threading
 
 import sublime
 import sublime_plugin
@@ -10,36 +10,42 @@ import sublime_plugin
 from .globalstate import call_soon_threadsafe, run_coroutine
 
 
-@contextlib.contextmanager
-def stored_task(self: "DispatchMixin") -> Generator[None, None, None]:
-    self.__tasks.add(asyncio.current_task())
-    yield
-    self.__tasks.discard(asyncio.current_task())
-
-
 class DispatchMixin:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.__tasks = WeakSet()  # type: WeakSet[Optional[Task]]
+        print("DispatchMixin", self, "__init__")
+        self.__tasks_lock = threading.Lock()
+        self.__tasks = WeakSet()  # type: WeakSet[Task]
 
     def __del__(self) -> None:
-        tasks = list(self.__tasks)
+        print("DispatchMixin", self, "__del__")
+        with self.__tasks_lock:
+            tasks = list(self.__tasks)
+            self.__tasks.clear()
+        print("attempting to cancel these tasks:", tasks)
+        if tasks:
 
-        def wrap() -> None:
-            for task in tasks:
-                if task:
-                    task.cancel()
+            def wrap() -> None:
+                for task in tasks:
+                    if task:
+                        task.cancel()
 
-        call_soon_threadsafe(wrap)
+            call_soon_threadsafe(wrap)
 
-    def _store_task(self, task: Task) -> None:
-        self.__tasks.add(task)
+    def dispatch(self, awaitable: Awaitable[Any]) -> bool:
 
-    def dispatch(self, coro: Awaitable[Any]) -> None:
         async def wrap() -> None:
-            with stored_task(self):
-                await coro
+            task = asyncio.ensure_future(awaitable)
+            with self.__tasks_lock:
+                self.__tasks.add(task)
+                print("after addition, stored tasks:", self.__tasks)
+            try:
+                await awaitable
+            finally:
+                with self.__tasks_lock:
+                    self.__tasks.discard(task)
+                    print("after removal, stored tasks:", self.__tasks)
 
-        run_coroutine(wrap())
+        return run_coroutine(wrap())
 
 
 class ApplicationCommand(sublime_plugin.ApplicationCommand, DispatchMixin):
