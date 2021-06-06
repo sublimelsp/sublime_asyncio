@@ -1,13 +1,13 @@
 import asyncio
+import contextlib
 from asyncio.tasks import Task
-from typing import Any, Awaitable, Generator, List, Optional
-from weakref import WeakSet, ref
+from typing import Any, Awaitable, Generator, Optional
+from weakref import WeakSet
 
 import sublime
 import sublime_plugin
 
 from .globalstate import call_soon_threadsafe, run_coroutine
-import contextlib
 
 
 @contextlib.contextmanager
@@ -42,58 +42,39 @@ class DispatchMixin:
         run_coroutine(wrap())
 
 
-
 class ApplicationCommand(sublime_plugin.ApplicationCommand, DispatchMixin):
     """
-    An asynchronous ApplicationCommand. Override the `execute` method instead
+    An asynchronous ApplicationCommand. Define the `execute` method instead
     of the `run` method.
     """
-    def run(self, **kwargs: Any) -> None:  # type: ignore
-        self.dispatch(self.execute(**kwargs))
 
-    async def execute(self, **kwargs: Any) -> None:
-        """
-        The asynchronous entrypoint of your command.
-        """
-        pass
+    def run(self, **kwargs: Any) -> None:  # type: ignore
+        self.dispatch(self.execute(**kwargs))  # type: ignore
 
 
 class WindowCommand(sublime_plugin.WindowCommand, DispatchMixin):
     """
-    An asynchronous WindowCommand. Override the `execute` method instead
+    An asynchronous WindowCommand. Define the `execute` method instead
     of the `run` method.
     """
+
     def __init__(self, window: sublime.Window):
         super().__init__(window)
         DispatchMixin.__init__(self)
 
     def run(self, **kwargs: Any) -> None:  # type: ignore
-        self.dispatch(self.execute(**kwargs))
-
-    async def execute(self, **kwargs: Any) -> None:
-        """
-        The asynchronous entrypoint of your command.
-        """
-        pass
+        self.dispatch(self.execute(**kwargs))  # type: ignore
 
 
 class ViewCommand(sublime_plugin.TextCommand, DispatchMixin):
     """
-    An asynchronous ViewCommand. Override the `execute` method instead
+    An asynchronous ViewCommand. Define the `execute` method instead
     of the `run` method.
-
-    This is the concurrent task variant. Meaning, if you run this command, and
-    then run it again, the first invocation will keep running.
     """
+
     def __init__(self, view: sublime.View):
         super().__init__(view)
         DispatchMixin.__init__(self)
 
     def run(self, _: sublime.Edit, **kwargs: Any) -> None:  # type: ignore
-        self.dispatch(self.execute(**kwargs))
-
-    async def execute(self, **kwargs: Any) -> None:
-        """
-        The asynchronous entrypoint of your command.
-        """
-        pass
+        self.dispatch(self.execute(**kwargs))  # type: ignore

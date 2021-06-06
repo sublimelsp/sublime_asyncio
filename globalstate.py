@@ -155,18 +155,20 @@ def release(at_exit: bool, exit_handler_id: Optional[int] = None) -> None:
             _data = None
 
 
-def get() -> asyncio.AbstractEventLoop:
+def get() -> Optional[asyncio.AbstractEventLoop]:
     """Get access to the loop"""
     global _data
-    assert _data is not None
-    return _data.loop
+    return _data.loop if _data else None
 
 
-def call_soon_threadsafe(callback: Callable[..., Any], *args: Any) -> None:
-    get().call_soon_threadsafe(callback, *args)
+def call_soon_threadsafe(callback: Callable[..., Any], *args: Any) -> bool:
+    if loop := get():
+        loop.call_soon_threadsafe(callback, *args)
+        return True
+    return False
 
 
-def run_coroutine(coro: Awaitable, task_receiver: Optional[Callable[[asyncio.Task], Any]] = None) -> None:
+def run_coroutine(coro: Awaitable, task_receiver: Optional[Callable[[asyncio.Task], Any]] = None) -> bool:
     """
     Convenience function to run a coroutine.
 
@@ -186,4 +188,4 @@ def run_coroutine(coro: Awaitable, task_receiver: Optional[Callable[[asyncio.Tas
         if task_receiver:
             task_receiver(task)
 
-    call_soon_threadsafe(wrap)
+    return call_soon_threadsafe(wrap)
