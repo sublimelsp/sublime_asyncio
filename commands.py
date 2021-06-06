@@ -36,7 +36,7 @@ class DispatchMixin:
 
     def dispatch(self, coro: Awaitable[Any]) -> None:
         async def wrap() -> None:
-            with stored_task():
+            with stored_task(self):
                 await coro
 
         run_coroutine(wrap())
@@ -48,7 +48,7 @@ class ApplicationCommand(sublime_plugin.ApplicationCommand, DispatchMixin):
     of the `run` method.
     """
 
-    def run(self, **kwargs: Any) -> None:  # type: ignore
+    def run(self, **kwargs: Any) -> None:
         self.dispatch(self.execute(**kwargs))  # type: ignore
 
 
@@ -62,7 +62,7 @@ class WindowCommand(sublime_plugin.WindowCommand, DispatchMixin):
         super().__init__(window)
         DispatchMixin.__init__(self)
 
-    def run(self, **kwargs: Any) -> None:  # type: ignore
+    def run(self, **kwargs: Any) -> None:
         self.dispatch(self.execute(**kwargs))  # type: ignore
 
 
