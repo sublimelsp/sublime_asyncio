@@ -39,7 +39,7 @@ def plugin_loaded() -> None:
         global _task
         _task = task
 
-    sublime_asyncio.run_coroutine(run(), store_task)
+    sublime_asyncio.dispatch(run(), store_task)
 
 
 def plugin_unloaded() -> None:
@@ -158,7 +158,8 @@ def release(at_exit: bool, exit_handler_id: Optional[int] = None) -> None:
 def get() -> asyncio.AbstractEventLoop:
     """Get access to the loop"""
     global _data
-    assert _data is not None
+    if not _data:
+        raise RuntimeError("get() called before acquire() or after release()")
     return _data.loop
 
 
@@ -166,7 +167,7 @@ def call_soon_threadsafe(callback: Callable[..., Any], *args: Any) -> None:
     get().call_soon_threadsafe(callback, *args)
 
 
-def run_coroutine(coro: Awaitable, task_receiver: Optional[Callable[[asyncio.Task], Any]] = None) -> None:
+def dispatch(coro: Awaitable, task_receiver: Optional[Callable[[asyncio.Task], Any]] = None) -> None:
     """
     Convenience function to run a coroutine.
 
