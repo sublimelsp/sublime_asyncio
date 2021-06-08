@@ -11,4 +11,4 @@ from .api_wrappers import (
     show_popup_menu,
     show_quick_panel,
 )
-from .globalstate import acquire, call_soon_threadsafe, get, release, run_coroutine
+from .globalstate import acquire, call_soon_threadsafe, dispatch, get, release
