@@ -78,9 +78,7 @@ def get_clipboard(size_limit: int = 16777216) -> Awaitable[str]:
     """
     future = asyncio.get_running_loop().create_future()
     try:
-        sublime.get_clipboard_async(
-            lambda content: call_soon_threadsafe(lambda: future.set_result(content)), size_limit=size_limit
-        )
+        sublime.get_clipboard_async(_partial(future.set_result), size_limit=size_limit)
     except Exception as ex:
         future.set_exception(ex)
     return future
@@ -98,7 +96,7 @@ def open_dialog(
     future = asyncio.get_running_loop().create_future()
     try:
         sublime.open_dialog(
-            callback=functools.partial(_resolve_optional_string, future),
+            callback=_partial(future.set_result),
             file_types=file_types,
             directory=directory,
             multi_select=multi_select,
@@ -121,7 +119,7 @@ def save_dialog(
     future = asyncio.get_running_loop().create_future()
     try:
         sublime.save_dialog(
-            callback=functools.partial(_resolve_optional_string, future),
+            callback=_partial(future.set_result),
             file_types=file_types,
             directory=directory,
             name=name,
@@ -139,7 +137,7 @@ def select_folder_dialog(directory: Optional[str] = None, multi_select: bool = F
     future = asyncio.get_running_loop().create_future()
     try:
         sublime.select_folder_dialog(
-            callback=functools.partial(_resolve_optional_string, future), directory=directory, multi_select=multi_select
+            callback=_partial(future.set_result), directory=directory, multi_select=multi_select
         )
     except Exception as ex:
         future.set_exception(ex)
@@ -152,7 +150,7 @@ def show_popup_menu(view: sublime.View, items: Sequence[str], flags: int = 0) ->
     """
     future = asyncio.get_running_loop().create_future()
     try:
-        view.show_popup_menu(items=items, on_select=lambda index: _resolve_index_selection(future, index), flags=flags)
+        view.show_popup_menu(items=items, on_select=_partial(future.set_result), flags=flags)
     except Exception as ex:
         future.set_exception(ex)
     return future
@@ -172,7 +170,7 @@ def show_input_panel(
         window.show_input_panel(
             caption=caption,
             initial_text=initial_text,
-            on_done=lambda s: call_soon_threadsafe(lambda: future.set_result(s)),
+            on_done=_partial(future.set_result),
             on_change=on_change,
             on_cancel=lambda: call_soon_threadsafe(lambda: future.set_exception(asyncio.CancelledError())),
         )
@@ -196,7 +194,7 @@ def show_quick_panel(
     try:
         window.show_quick_panel(
             items=items,
-            on_select=functools.partial(_resolve_index_selection, future),
+            on_select=_partial(future.set_result),
             flags=flags,
             selected_index=selected_index,
             on_highlight=on_highlighted,
@@ -207,15 +205,5 @@ def show_quick_panel(
     return future
 
 
-def _resolve_optional_string(future: asyncio.Future, s: Optional[str]) -> None:
-    if s is None:
-        call_soon_threadsafe(future.set_exception, asyncio.CancelledError())
-    else:
-        call_soon_threadsafe(future.set_result, s)
-
-
-def _resolve_index_selection(future: asyncio.Future, index: int) -> None:
-    if index == -1:
-        call_soon_threadsafe(future.set_exception, asyncio.CancelledError())
-    else:
-        call_soon_threadsafe(future.set_result, index)
+def _partial(f: Callable[[Any], None]) -> Callable[[Any], None]:
+    return lambda x: call_soon_threadsafe(lambda: f(x))
