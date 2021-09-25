@@ -3,13 +3,11 @@ This module bridges the old, low-level callback-based functions to high-level as
 """
 import asyncio
 import functools
-from typing import Any, Awaitable, Callable, Optional, Sequence, Tuple, TypeVar, Union
+from typing import Any, Awaitable, Callable, Optional, Sequence, Tuple, Union
 
 import sublime
 
-from .globalstate import call_soon_threadsafe
-
-T = TypeVar("T")
+from .globalstate import T, call_soon_threadsafe
 
 
 def _resolve_function_invocation(future: asyncio.Future, f: Callable[..., Any], *args: Any, **kwargs: Any) -> None:

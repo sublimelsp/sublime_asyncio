@@ -56,9 +56,10 @@ class EventListener(sublime_plugin.EventListener):
 
 import asyncio
 import threading
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar
 
 ExitHandler = Callable[[], Awaitable[None]]
+T = TypeVar("T")
 
 
 class _Data:
@@ -172,7 +173,7 @@ def call_soon_threadsafe(callback: Callable[..., Any], *args: Any) -> None:
     get().call_soon_threadsafe(callback, *args)
 
 
-def dispatch(coro: Awaitable, task_receiver: Optional[Callable[[asyncio.Task], Any]] = None) -> None:
+def dispatch(coro: Awaitable[Any], task_receiver: Optional[Callable[[asyncio.Task], Any]] = None) -> None:
     """
     Convenience function to run a coroutine.
 
@@ -193,3 +194,17 @@ def dispatch(coro: Awaitable, task_receiver: Optional[Callable[[asyncio.Task], A
             task_receiver(task)
 
     call_soon_threadsafe(wrap)
+
+
+def sync(coro: Awaitable[T]) -> T:
+    """
+    Run an asynchronous function in a blocking manner.
+    """
+    global _data
+    if _data is None:
+        raise RuntimeError("sync() called before acquire() or after release()")
+    _data.blocking_stop()
+    try:
+        return _data.loop.run_until_complete(coro)
+    finally:
+        _data.start()
