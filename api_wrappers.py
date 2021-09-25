@@ -12,7 +12,7 @@ from .globalstate import call_soon_threadsafe
 T = TypeVar("T")
 
 
-def _resolve_function_invocation(future: asyncio.Future, f: Callable[..., T], *args: Any, **kwargs: Any) -> None:
+def _resolve_function_invocation(future: asyncio.Future, f: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
     try:
         call_soon_threadsafe(future.set_result, f(*args, **kwargs))
     except Exception as ex:
