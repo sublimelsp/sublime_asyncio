@@ -144,18 +144,6 @@ def select_folder_dialog(directory: Optional[str] = None, multi_select: bool = F
     return future
 
 
-def show_popup_menu(view: sublime.View, items: Sequence[str], flags: int = 0) -> Awaitable[int]:
-    """
-    See https://www.sublimetext.com/docs/api_reference.html
-    """
-    future = asyncio.get_running_loop().create_future()
-    try:
-        view.show_popup_menu(items=items, on_select=_partial(future.set_result), flags=flags)
-    except Exception as ex:
-        future.set_exception(ex)
-    return future
-
-
 def show_input_panel(
     window: sublime.Window,
     caption: Optional[str] = None,

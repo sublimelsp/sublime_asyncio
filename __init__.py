@@ -8,7 +8,6 @@ from .api_wrappers import (
     save_dialog,
     select_folder_dialog,
     show_input_panel,
-    show_popup_menu,
     show_quick_panel,
 )
 from .globalstate import acquire, call_soon_threadsafe, dispatch, get, release
