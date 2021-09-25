@@ -66,8 +66,6 @@ class _Data:
         self.refcount = 1
         self.loop = asyncio.new_event_loop()
         self.exit_handlers: Dict[int, ExitHandler] = {}
-        self.thread = threading.Thread(target=self.loop.run_forever)
-        self.thread.start()
 
     def __del__(self) -> None:
         for task in asyncio.all_tasks(self.loop):
@@ -77,6 +75,14 @@ class _Data:
         except Exception as ex:
             print("Exception while shutting down asynchronous generators:", ex)
         self.loop.close()
+
+    def blocking_stop(self) -> None:
+        self.loop.call_soon_threadsafe(lambda: asyncio.get_running_loop().stop())
+        self.thread.join()
+
+    def start(self) -> None:
+        self.thread = threading.Thread(target=self.loop.run_forever)
+        self.thread.start()
 
     def run_all_exit_handlers(self) -> None:
         self.loop.run_until_complete(self._invoke_exit_handlers())
@@ -109,6 +115,7 @@ def acquire(exit_handler: Optional[ExitHandler] = None) -> Optional[int]:
     global _exit_handler_id
     if _data is None:
         _data = _Data()
+        _data.start()
     else:
         _data.refcount += 1
     if exit_handler:
@@ -134,8 +141,7 @@ def release(at_exit: bool, exit_handler_id: Optional[int] = None) -> None:
     global _data
     if _data is None:
         return
-    _data.loop.call_soon_threadsafe(lambda: asyncio.get_running_loop().stop())
-    _data.thread.join()
+    _data.blocking_stop()
     if at_exit:
         _data.run_all_exit_handlers()
         _data = None
@@ -149,8 +155,7 @@ def release(at_exit: bool, exit_handler_id: Optional[int] = None) -> None:
                     print("Exception in exit handler:", ex)
         _data.refcount -= 1
         if _data.refcount > 0:
-            _data.thread = threading.Thread(target=_data.loop.run_forever)
-            _data.thread.start()
+            _data.start()
         else:
             _data = None
 
