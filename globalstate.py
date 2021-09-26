@@ -58,6 +58,8 @@ import asyncio
 import threading
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar
 
+from .executor import SetTimeoutAsyncExecutor
+
 ExitHandler = Callable[[], Awaitable[None]]
 T = TypeVar("T")
 
@@ -66,6 +68,7 @@ class _Data:
     def __init__(self) -> None:
         self.refcount = 1
         self.loop = asyncio.new_event_loop()
+        self.loop.set_default_executor(SetTimeoutAsyncExecutor())
         self.exit_handlers: Dict[int, ExitHandler] = {}
 
     def __del__(self) -> None:
