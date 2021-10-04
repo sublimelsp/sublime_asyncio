@@ -70,6 +70,11 @@ class _Data:
         self.loop = asyncio.new_event_loop()
         self.loop.set_default_executor(SetTimeoutAsyncExecutor())
         self.exit_handlers: Dict[int, ExitHandler] = {}
+        self._lock = threading.Lock()
+        self._cv = threading.Condition(self._lock)
+        self._keep_running = True
+        self._stopped = True
+        self.thread: Optional[threading.Thread] = None
 
     def __del__(self) -> None:
         for task in asyncio.all_tasks(self.loop):
@@ -78,15 +83,33 @@ class _Data:
             self.loop.run_until_complete(self.loop.shutdown_asyncgens())
         except Exception as ex:
             print("Exception while shutting down asynchronous generators:", ex)
+        if self.thread and self.thread.is_alive():
+            with self._cv:
+                self._keep_running = True
+                self._stopped = True
+                self._cv.notify()
+            self.thread.join()
+            self.thread = None
         self.loop.close()
 
     def blocking_stop(self) -> None:
+        with self._cv:
+            self._keep_running = False
         self.loop.call_soon_threadsafe(lambda: asyncio.get_running_loop().stop())
-        self.thread.join()
+        with self._cv:
+            self._cv.wait_for(lambda: self._stopped)
 
     def start(self) -> None:
-        self.thread = threading.Thread(target=self.loop.run_forever)
-        self.thread.start()
+        if self.thread is None:
+            self.thread = threading.Thread(target=self._run_forever)
+            with self._cv:
+                self._stopped = False
+            self.thread.start()
+        else:
+            with self._cv:
+                self._stopped = False
+                self._keep_running = True
+                self._cv.notify()
 
     def run_all_exit_handlers(self) -> None:
         self.loop.run_until_complete(self._invoke_exit_handlers())
@@ -99,6 +122,16 @@ class _Data:
             if isinstance(result, Exception):
                 print("Exception in exit handler:", result)
         self.exit_handlers.clear()
+
+    def _run_forever(self) -> None:
+        while True:
+            self.loop.run_forever()
+            with self._cv:
+                self._stopped = True
+                self._cv.notify()
+                self._cv.wait_for(lambda: self._keep_running)
+                if self._stopped:
+                    return
 
 
 _data = None  # type: Optional[_Data]
